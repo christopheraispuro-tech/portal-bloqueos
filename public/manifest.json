@@ -1,0 +1,9 @@
+{
+  "name": "Bloqueo de Números",
+  "short_name": "Bloqueos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#063f7a",
+  "theme_color": "#063f7a",
+  "orientation": "any"
+}

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CONFIGURACIÓN PARA MODO APP PANTALLA COMPLETA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#063f7a">
+    <link rel="manifest" href="/manifest.json">
+    <title>Bloqueo de Número</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eef2f6;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 500px;
+            min-height: 100vh;
+            margin: auto;
+            background: white;
+            transition: max-width 0.3s ease;
+        }
+
+        .header {
+            background: #063f7a;
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .pantalla {
+            display: none;
+            padding: 25px;
+        }
+
+        .pantalla.activa {
+            display: block;
+        }
+
+        .numero {
+            border: 2px solid #0864bd;
+            border-radius: 14px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .teclado {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .tecla {
+            height: 75px;
+            border: none;
+            border-radius: 12px;
+            background: #06427e;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tecla:active {
+            transform: scale(.96);
+        }
+
+        .gris {
+            background: #777;
+        }
+
+        .boton-principal {
+            width: 100%;
+            height: 65px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 14px;
+            background: #10ad50;
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .boton-principal:disabled {
+            background: #8e9ba8;
+            cursor: not-allowed;
+        }
+
+        .titulo {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #063f7a;
+            margin-bottom: 15px;
+        }
+
+        .subtitulo {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .motivo {
+            width: 100%;
+            height: 60px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 12px;
+            background: #06427e;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: left;
+            padding-left: 20px;
+            cursor: pointer;
+        }
+
+        .motivo.seleccionado {
+            background: #10ad50;
+        }
+
+        .campo-grupo {
+            margin-bottom: 12px;
+        }
+
+        .campo-grupo label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #063f7a;
+            font-size: 15px;
+        }
+
+        .campo-texto {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #0864bd;
+            border-radius: 10px;
+            font-size: 17px;
+            outline: none;
+            background: #fdfdfd;
+        }
+
+        textarea.campo-texto {
+            height: 80px;
+            resize: none;
+            font-family: inherit;
+        }
+
+        .resumen {
+            background: #f2f5f8;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 17px;
+        }
+
+        .resumen p {
+            margin: 6px 0;
+        }
+
+        .resumen strong {
+            color: #063f7a;
+        }
+
+        .volver {
+            width: 100%;
+            height: 50px;
+            margin-top: 10px;
+            border: 2px solid #063f7a;
+            border-radius: 12px;
+            background: white;
+            color: #063f7a;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .exito {
+            text-align: center;
+            padding-top: 30px;
+        }
+
+        .check {
+            font-size: 60px;
+        }
+
+        .exito h2 {
+            color: #10ad50;
+            font-size: 26px;
+        }
+
+        /* =========================================================
+           ESTILOS PARA ORIENTACIÓN HORIZONTAL (LANDSCAPE)
+        ========================================================= */
+        @media (orientation: landscape) and (min-width: 600px), (min-width: 800px) {
+            .app {
+                max-width: 850px;
+                min-height: auto;
+                margin: 15px auto;
+                border-radius: 20px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }
+
+            .pantalla {
+                padding: 20px 30px;
+            }
+
+            /* Pantalla 1: Número a la izquierda, teclado a la derecha */
+            .col-2-p1 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 25px;
+                align-items: center;
+            }
+
+            .col-izq-p1 {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            /* Pantalla 2: Opciones en 2 columnas */
+            .grid-motivos {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .grid-motivos .motivo {
+                margin-bottom: 0;
+            }
+
+            /* Pantalla 3: Formulario en 2 columnas */
+            .col-2-p3 {
+                display: grid;
+                grid-template-columns: 1.2fr 1fr;
+                gap: 25px;
+                align-items: start;
+            }
+
+            .col-der-p3 {
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                height: 100%;
+            }
+
+            .tecla {
+                height: 60px;
+            }
+
+            .numero {
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="header">
+        🛡️ Bloqueo de Número
+    </div>
+
+    <!-- ==========================================
+         PANTALLA 1: NÚMERO
+    ========================================== -->
+    <div id="pantallaNumero" class="pantalla activa">
+        <div class="titulo">Ingresa el número</div>
+        
+        <div class="col-2-p1">
+            <div class="col-izq-p1">
+                <div id="numero" class="numero">Escribe el número</div>
+                <button class="boton-principal" onclick="irAMotivo()">CONTINUAR</button>
+            </div>
+
+            <div class="teclado">
+                <button class="tecla" onclick="agregar('1')">1</button>
+                <button class="tecla" onclick="agregar('2')">2</button>
+                <button class="tecla" onclick="agregar('3')">3</button>
+                <button class="tecla" onclick="agregar('4')">4</button>
+                <button class="tecla" onclick="agregar('5')">5</button>
+                <button class="tecla" onclick="agregar('6')">6</button>
+                <button class="tecla" onclick="agregar('7')">7</button>
+                <button class="tecla" onclick="agregar('8')">8</button>
+                <button class="tecla" onclick="agregar('9')">9</button>
+                <button class="tecla gris" onclick="borrar()">⌫</button>
+                <button class="tecla" onclick="agregar('0')">0</button>
+                <button class="tecla gris" onclick="limpiar()">C</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         PANTALLA 2: MOTIVO
+    ========================================== -->
+    <div id="pantallaMotivo" class="pantalla">
+        <div class="titulo">¿Por qué deseas bloquearlo?</div>
+        <div class="subtitulo">Selecciona solamente una opción</div>
+
+        <div class="grid-motivos">
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Solicitó no recibir llamadas')">🚫 Solicitó no recibir llamadas</button>
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Número equivocado')">❓ Número equivocado</button>
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Groseros')">😡 Groseros</button>
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Menor de edad')">👶 Menor de edad</button>
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Empresas')">🏢 Empresas</button>
+            <button class="motivo" onclick="seleccionarMotivo(this, 'Posible fraude')">⚠️ Posible fraude</button>
+        </div>
+
+        <button class="boton-principal" onclick="irADetalles()">CONTINUAR</button>
+        <button class="volver" onclick="mostrarPantalla('pantallaNumero')">← REGRESAR</button>
+    </div>
+
+    <!-- ==========================================
+         PANTALLA 3: DATOS Y ENVÍO
+    ========================================== -->
+    <div id="pantallaExtension" class="pantalla">
+        <div class="titulo">Datos de la solicitud</div>
+
+        <div class="col-2-p3">
+            <div class="col-izq-p3">
+                <div class="campo-grupo">
+                    <label for="extension">Extensión del operador (*):</label>
+                    <input id="extension" class="campo-texto" type="tel" inputmode="numeric" maxlength="6" placeholder="0000">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="operador">Nombre del operador (Opcional):</label>
+                    <input id="operador" class="campo-texto" type="text" placeholder="Ej. Edgar">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="comentarios">Comentarios / Notas (*):</label>
+                    <textarea id="comentarios" class="campo-texto" placeholder="Escribe un comentario..."></textarea>
+                </div>
+            </div>
+
+            <div class="col-der-p3">
+                <div class="resumen">
+                    <p><strong>Teléfono:</strong> <span id="resumenNumero"></span></p>
+                    <p><strong>Motivo:</strong> <span id="resumenMotivo"></span></p>
+                </div>
+
+                <button id="btnEnviar" class="boton-principal" onclick="finalizarBloqueo()">✅ FINALIZAR BLOQUEO</button>
+                <button class="volver" onclick="mostrarPantalla('pantallaMotivo')">← REGRESAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         PANTALLA 4: ÉXITO
+    ========================================== -->
+    <div id="pantallaExito" class="pantalla exito">
+        <div class="check">✅</div>
+        <h2>¡Bloqueo enviado!</h2>
+        <p>La solicitud fue registrada correctamente.</p>
+
+        <div class="resumen">
+            <p><strong>Teléfono:</strong> <span id="finalNumero"></span></p>
+            <p><strong>Motivo:</strong> <span id="finalMotivo"></span></p>
+            <p><strong>Extensión:</strong> <span id="finalExtension"></span></p>
+        </div>
+
+        <button class="boton-principal" onclick="nuevoBloqueo()">+ NUEVO BLOQUEO</button>
+    </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    const socket = io();
+    let numero = "";
+    let motivoSeleccionado = "";
+
+    socket.on("connect", () => {
+        console.log("🟢 TABLET CONECTADA | ID:", socket.id);
+    });
+
+    socket.on("connect_error", (error) => {
+        console.error("❌ ERROR SOCKET.IO:", error);
+    });
+
+    function agregar(d) {
+        if (numero.length < 15) {
+            numero += d;
+            actualizarNumero();
+        }
+    }
+
+    function borrar() {
+        numero = numero.slice(0, -1);
+        actualizarNumero();
+    }
+
+    function limpiar() {
+        numero = "";
+        actualizarNumero();
+    }
+
+    function actualizarNumero() {
+        document.getElementById("numero").textContent = numero || "Escribe el número";
+    }
+
+    function mostrarPantalla(id) {
+        document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+        document.getElementById(id).classList.add("activa");
+    }
+
+    function irAMotivo() {
+        if (numero.length < 7) {
+            alert("Debes ingresar un número válido de al menos 7 dígitos.");
+            return;
+        }
+        mostrarPantalla("pantallaMotivo");
+    }
+
+    function seleccionarMotivo(boton, motivo) {
+        document.querySelectorAll(".motivo").forEach(b => b.classList.remove("seleccionado"));
+        boton.classList.add("seleccionado");
+        motivoSeleccionado = motivo;
+    }
+
+    function irADetalles() {
+        if (!motivoSeleccionado) {
+            alert("Selecciona el motivo del bloqueo.");
+            return;
+        }
+        document.getElementById("resumenNumero").textContent = numero;
+        document.getElementById("resumenMotivo").textContent = motivoSeleccionado;
+        mostrarPantalla("pantallaExtension");
+    }
+
+    function finalizarBloqueo() {
+        const extension = document.getElementById("extension").value.trim();
+        const operador = document.getElementById("operador").value.trim();
+        const comentarios = document.getElementById("comentarios").value.trim();
+        const btn = document.getElementById("btnEnviar");
+
+        if (!/^\d+$/.test(extension)) {
+            alert("La extensión es obligatoria y debe contener solo números.");
+            return;
+        }
+
+        if (!comentarios) {
+            alert("Los comentarios son obligatorios.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "⏳ ENVIANDO AL CRM...";
+
+        const ahora = new Date();
+        const fecha = ahora.toLocaleString("es-MX", {
+            dateStyle: "short",
+            timeStyle: "short"
+        });
+
+        const datosBloqueo = {
+            numero: numero,
+            motivo: motivoSeleccionado,
+            extension: extension,
+            operador: operador,
+            comentarios: comentarios,
+            fecha: fecha
+        };
+
+        socket.emit("nuevoBloqueo", datosBloqueo, (respuesta) => {
+            if (respuesta && respuesta.ok) {
+                document.getElementById("finalNumero").textContent = numero;
+                document.getElementById("finalMotivo").textContent = motivoSeleccionado;
+                document.getElementById("finalExtension").textContent = extension;
+
+                mostrarPantalla("pantallaExito");
+
+                btn.disabled = false;
+                btn.textContent = "✅ FINALIZAR BLOQUEO";
+            } else {
+                alert("❌ Ocurrió un error al enviar el bloqueo. Intenta nuevamente.");
+                btn.disabled = false;
+                btn.textContent = "✅ FINALIZAR BLOQUEO";
+            }
+        });
+    }
+
+    function nuevoBloqueo() {
+        numero = "";
+        motivoSeleccionado = "";
+        document.getElementById("extension").value = "";
+        document.getElementById("operador").value = "";
+        document.getElementById("comentarios").value = "";
+
+        document.querySelectorAll(".motivo").forEach(b => b.classList.remove("seleccionado"));
+
+        actualizarNumero();
+        mostrarPantalla("pantallaNumero");
+    }
+</script>
+
+</body>
+</html>

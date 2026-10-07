@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Bloqueos</title>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #eef2f6; color: #222; }
+        .header { background: #063f7a; color: white; padding: 25px 35px; display: flex; justify-content: space-between; align-items: center; }
+        .titulo { font-size: 30px; font-weight: bold; }
+        .estado { background: #10ad50; padding: 10px 20px; border-radius: 30px; font-weight: bold; }
+        .contenedor { padding: 30px; }
+        .barra-acciones { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; }
+        .btn-copiar { background: #0864bd; color: white; border: none; padding: 14px 24px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-copiar:hover { background: #06427e; }
+        .alerta { display: none; background: #dff8e8; border: 2px solid #10ad50; border-radius: 15px; padding: 15px 25px; font-size: 20px; font-weight: bold; color: #07863c; }
+        .alerta.visible { display: block; }
+        .tabla-contenedor { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.08); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #063f7a; color: white; padding: 18px; text-align: left; font-size: 17px; }
+        td { padding: 18px; border-bottom: 1px solid #ddd; font-size: 17px; }
+        tr:hover { background: #f5f8fb; }
+        .motivo { padding: 8px 15px; border-radius: 20px; font-weight: bold; display: inline-block; }
+        .groseros { background: #ffdada; color: #a00000; }
+        .menor { background: #d8eaff; color: #07559b; }
+        .empresa { background: #eadcff; color: #6124a5; }
+        .competencia { background: #ffe6b3; color: #995900; }
+        .otros { background: #e5e5e5; color: #444; }
+        .atendido { border: none; background: #10ad50; color: white; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .atendido:disabled { background: #777; cursor: default; }
+        .vacio { text-align: center; padding: 50px; color: #777; font-size: 20px; }
+        .texto-comentario { max-width: 250px; word-break: break-word; color: #444; font-size: 15px; }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <div class="titulo">🛡️ PANEL DE BLOQUEOS</div>
+    <div class="estado">🟢 EN LÍNEA</div>
+</div>
+
+<div class="contenedor">
+    <div class="barra-acciones">
+        <button class="btn-copiar" onclick="copiarPendientes()">📋 COPIAR NÚMEROS PENDIENTES</button>
+        <div id="alerta" class="alerta">🔔 NUEVO BLOQUEO RECIBIDO</div>
+    </div>
+
+    <div class="tabla-contenedor">
+        <table>
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Motivo</th>
+                    <th>Extensión</th>
+                    <th>Operador</th>
+                    <th>Comentarios</th>
+                    <th>Fecha / Hora</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="listaBloqueos">
+                <tr><td colspan="7" class="vacio">Cargando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+
+    // 1. Cargar historial
+    socket.on("cargarHistorial", (historial) => {
+        const lista = document.getElementById("listaBloqueos");
+        lista.innerHTML = "";
+
+        if (historial.length === 0) {
+            lista.innerHTML = '<tr><td colspan="7" class="vacio">Sin bloqueos registrados</td></tr>';
+            return;
+        }
+
+        historial.forEach(datos => {
+            renderizarFila(datos, false);
+        });
+    });
+
+    // 2. Nuevo bloqueo en tiempo real
+    socket.on("bloqueoRecibido", (datos) => {
+        renderizarFila(datos, true);
+        mostrarAlerta();
+        reproducirSonido();
+    });
+
+    // 3. Sincronizar atendido
+    socket.on("bloqueoAtendido", (id) => {
+        const btn = document.querySelector(`button[data-id="${id}"]`);
+        if (btn) {
+            btn.textContent = "✓ ATENDIDO";
+            btn.disabled = true;
+        }
+    });
+
+    function renderizarFila(datos, alInicio) {
+        const lista = document.getElementById("listaBloqueos");
+
+        const vacio = lista.querySelector(".vacio");
+        if (vacio) vacio.parentElement.remove();
+
+        let claseMotivo = "otros";
+        if (datos.motivo === "Groseros" || datos.motivo === "Groseros / Abusivo") claseMotivo = "groseros";
+        else if (datos.motivo === "Menor de edad") claseMotivo = "menor";
+        else if (datos.motivo === "Empresas") claseMotivo = "empresa";
+        else if (datos.motivo === "Competencias") claseMotivo = "competencia";
+
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+            <td><strong>${datos.numero || 'N/A'}</strong></td>
+            <td><span class="motivo ${claseMotivo}">${datos.motivo || 'N/A'}</span></td>
+            <td><strong>${datos.extension || 'N/A'}</strong></td>
+            <td><strong>${datos.operador || 'Sin especificar'}</strong></td>
+            <td class="texto-comentario">${datos.comentarios || 'Sin comentarios'}</td>
+            <td>${datos.fecha || ''}</td>
+            <td>
+                <button class="atendido" data-id="${datos.id}" ${datos.atendido ? 'disabled' : ''} onclick="solicitarAtender('${datos.id}')">
+                    ${datos.atendido ? '✓ ATENDIDO' : '✓ ATENDER'}
+                </button>
+            </td>
+        `;
+
+        if (alInicio) {
+            lista.prepend(fila);
+        } else {
+            lista.appendChild(fila);
+        }
+    }
+
+    function solicitarAtender(id) {
+        socket.emit("marcarAtendido", id);
+    }
+
+    function copiarPendientes() {
+        const botones = document.querySelectorAll(".atendido:not(:disabled)");
+        const numeros = [];
+
+        botones.forEach(btn => {
+            const fila = btn.closest("tr");
+            const numero = fila.querySelector("td:first-child strong").textContent.trim();
+            numeros.push(numero);
+            solicitarAtender(btn.getAttribute("data-id"));
+        });
+
+        if (numeros.length === 0) {
+            alert("⚠️ No hay números pendientes.");
+            return;
+        }
+
+        navigator.clipboard.writeText(numeros.join("\n"));
+        alert(`✅ Copiados ${numeros.length} números y marcados como atendidos.`);
+    }
+
+    function mostrarAlerta() {
+        const alerta = document.getElementById("alerta");
+        alerta.classList.add("visible");
+        setTimeout(() => alerta.classList.remove("visible"), 5000);
+    }
+
+    function reproducirSonido() {
+        const audio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+        audio.play().catch(() => {});
+    }
+</script>
+
+</body>
+</html>
